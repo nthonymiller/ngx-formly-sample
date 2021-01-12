@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Model } from './sport/sport.component';
 
 @Component({
   selector: 'app-root',
@@ -7,4 +8,13 @@ import { Component } from '@angular/core';
 })
 export class AppComponent {
   title = 'sample-app';
+
+  value: Partial<Model>;
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      console.log('Setting model')
+      this.value = { sport: "1", team: "2" };
+    }, 3000);
+  }
 }
