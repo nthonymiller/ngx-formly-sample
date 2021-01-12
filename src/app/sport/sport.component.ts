@@ -1,8 +1,8 @@
-import { Component, Input, SimpleChange, SimpleChanges } from "@angular/core";
-import { FormGroup } from "@angular/forms";
-import { FormlyFieldConfig } from "@ngx-formly/core";
-import { defer, of, concat } from "rxjs";
-import { distinctUntilChanged, map, startWith, tap } from "rxjs/operators";
+import { Component, Input, SimpleChanges } from '@angular/core';
+import { FormGroup } from '@angular/forms';
+import { FormlyFieldConfig } from '@ngx-formly/core';
+import { of } from 'rxjs';
+import { map, switchMap, tap } from 'rxjs/operators';
 
 export interface Model {
   readonly player: string;
@@ -25,11 +25,11 @@ export class SportComponent {
       key: "sport",
       type: "select",
       templateOptions: {
-        label: "Sport",
-        options: [{ id: "1", name: "Soccer" }, { id: "2", name: "Basketball" }],
-        valueProp: "id",
-        labelProp: "name"
-      }
+        label: 'Sport',
+        options: this.getSports$(),
+        valueProp: 'id',
+        labelProp: 'name',
+      },
     },
     {
       key: "team",
@@ -41,35 +41,14 @@ export class SportComponent {
         labelProp: "name"
       },
       hooks: {
-        onInit: field => {
-          const teams = [
-            { id: "1", name: "Bayern Munich", sportId: "1" },
-            { id: "2", name: "Real Madrid", sportId: "1" },
-            { id: "3", name: "Cleveland", sportId: "2" },
-            { id: "4", name: "Miami", sportId: "2" }
-          ];
-          const sportControl = this.form.get("sport");
-
-          console.log('Init teams', sportControl.value);
-
-          const initValue$ = defer(() => {
-            console.log('InitValue', sportControl.value)
-            return of(sportControl.value)
-          });
-
-          const changes$ = sportControl.valueChanges
-            .pipe(
-              tap(x => console.log('Value Changes', x)),
-              tap(() => field.formControl.setValue(null))
-            );
-
-          field.templateOptions.options = concat(initValue$, changes$)
-            .pipe(
-              tap(sportId => console.log('Filtering Sports', sportId)),
-              map(sportId => teams.filter(team => team.sportId === sportId))
-            );
-        }
-      }
+        onInit: (field) => {
+          const sportControl = this.form.get('sport');
+          const changes$ = sportControl.valueChanges;
+          field.templateOptions.options = changes$.pipe(
+            switchMap((sportId) => this.getTeams$(sportId))
+          );
+        },
+      },
     },
     {
       key: "player",
@@ -81,22 +60,10 @@ export class SportComponent {
         labelProp: "name"
       },
       hooks: {
-        onInit: field => {
-          const players = [
-            { id: "1", name: "Bayern Munich (Player 1)", teamId: "1" },
-            { id: "2", name: "Bayern Munich (Player 2)", teamId: "1" },
-            { id: "3", name: "Real Madrid (Player 1)", teamId: "2" },
-            { id: "4", name: "Real Madrid (Player 2)", teamId: "2" },
-            { id: "5", name: "Cleveland (Player 1)", teamId: "3" },
-            { id: "6", name: "Cleveland (Player 2)", teamId: "3" },
-            { id: "7", name: "Miami (Player 1)", teamId: "4" },
-            { id: "8", name: "Miami (Player 2)", teamId: "4" }
-          ];
-          const teamControl = this.form.get("team");
+        onInit: (field) => {
+          const teamControl = this.form.get('team');
           field.templateOptions.options = teamControl.valueChanges.pipe(
-            startWith(teamControl.value),
-            map(teamId => players.filter(player => player.teamId === teamId)),
-            tap(() => field.formControl.setValue(null))
+            switchMap((teamId) => this.getPlayers$(teamId))
           );
         }
       }
@@ -107,6 +74,35 @@ export class SportComponent {
     if (changes.model != null) {
       console.log('Model has changed', changes.model.currentValue);
     }
+  }
+
+  getSports$() {
+    return of([
+      { id: '1', name: 'Soccer' },
+      { id: '2', name: 'Basketball' },
+    ]);
+  }
+
+  getTeams$(sportId) {
+    return of([
+      { id: '1', name: 'Bayern Munich', sportId: '1' },
+      { id: '2', name: 'Real Madrid', sportId: '1' },
+      { id: '3', name: 'Cleveland', sportId: '2' },
+      { id: '4', name: 'Miami', sportId: '2' },
+    ]).pipe(map((teams) => teams.filter((team) => team.sportId === sportId)));
+  }
+
+  getPlayers$(teamId) {
+    return of([
+      { id: '1', name: 'Bayern Munich (Player 1)', teamId: '1' },
+      { id: '2', name: 'Bayern Munich (Player 2)', teamId: '1' },
+      { id: '3', name: 'Real Madrid (Player 1)', teamId: '2' },
+      { id: '4', name: 'Real Madrid (Player 2)', teamId: '2' },
+      { id: '5', name: 'Cleveland (Player 1)', teamId: '3' },
+      { id: '6', name: 'Cleveland (Player 2)', teamId: '3' },
+      { id: '7', name: 'Miami (Player 1)', teamId: '4' },
+      { id: '8', name: 'Miami (Player 2)', teamId: '4' },
+    ]).pipe(map((teams) => teams.filter((team) => team.teamId === teamId)));
   }
 
   submit() {
